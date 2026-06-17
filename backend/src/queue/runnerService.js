@@ -1,6 +1,7 @@
 import prisma from '../config/db.js';
 import redis from '../config/redis.js';
 import { enqueueCampaign } from './campaignQueue.js';
+import { scanPorts, scanWebHeaders, scanApi } from '../security/scanner.js';
 
 const MAX_RETRIES = 3;
 
@@ -34,56 +35,109 @@ export const executeCampaign = async (campaignId) => {
       data: { status: 'Running' }
     });
 
-    // Simulate progress in chunks
+    // Fetch assets belonging to this tenant
+    const assets = await prisma.asset.findMany({
+      where: { tenantId: campaign.tenantId }
+    });
+
     let progress = campaign.progress;
     let findings = campaign.findings;
 
-    while (progress < 100) {
-      // Wait for a short interval (e.g. 500ms) to simulate real work
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      // Refresh campaign status to check if it has been paused or stopped by the user
-      const currentCampaign = await prisma.campaign.findUnique({
-        where: { id: campaignId }
-      });
-
-      if (!currentCampaign) {
-        console.log(`[Runner] Campaign ${campaignId} deleted during execution.`);
-        return;
+    if (assets.length === 0) {
+      console.log(`[Runner] No assets found for tenant ${campaign.tenantId}. Simulating quick scan.`);
+      while (progress < 100) {
+        await new Promise((resolve) => setTimeout(resolve, 200));
+        progress += 50;
+        if (progress > 100) progress = 100;
+        await prisma.campaign.update({
+          where: { id: campaignId },
+          data: { progress }
+        });
       }
+    } else {
+      const progressPerAsset = Math.floor((100 - progress) / assets.length);
+      for (let i = 0; i < assets.length; i++) {
+        const asset = assets[i];
+        console.log(`[Runner] Scanning asset ${asset.id} (${asset.type}): ${asset.name}`);
 
-      if (currentCampaign.status === 'Paused') {
-        console.log(`[Runner] Campaign ${campaignId} was paused. Stopping worker loop.`);
-        return;
+        // Refresh campaign status to check if it has been paused or stopped by the user
+        const currentCampaign = await prisma.campaign.findUnique({
+          where: { id: campaignId }
+        });
+
+        if (!currentCampaign) {
+          console.log(`[Runner] Campaign ${campaignId} deleted during execution.`);
+          return;
+        }
+
+        if (currentCampaign.status === 'Paused') {
+          console.log(`[Runner] Campaign ${campaignId} was paused. Stopping worker loop.`);
+          return;
+        }
+
+        if (currentCampaign.status === 'Completed' || currentCampaign.status === 'Failed') {
+          console.log(`[Runner] Campaign ${campaignId} reached a terminal state externally.`);
+          return;
+        }
+
+        let assetFindings = [];
+
+        // Run scans based on asset type
+        if (asset.type === 'IP') {
+          const openPorts = await scanPorts(asset.name);
+          if (openPorts.length > 0) {
+            assetFindings.push({
+              title: 'Exposed Network Services & Open Ports',
+              severity: 'Medium',
+              description: `A port scan discovered open network services on host ${asset.name}. Exposed services increase attacker exposure.`,
+              evidence: `Open Ports:\n` + openPorts.map(p => `  - Port ${p.port}: ${p.service}`).join('\n'),
+              recommendations: 'Disable unused services, bind databases to local address (127.0.0.1) only, and configure firewalls.'
+            });
+          }
+        } else if (asset.type === 'Domain' || asset.type === 'Subdomain') {
+          const webVulns = await scanWebHeaders(asset.name);
+          assetFindings = assetFindings.concat(webVulns);
+        } else if (asset.type === 'API') {
+          const apiVulns = await scanApi(asset.name);
+          assetFindings = assetFindings.concat(apiVulns);
+        }
+
+        // Write findings to database
+        for (const vuln of assetFindings) {
+          const fndId = `FND-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+          await prisma.finding.create({
+            data: {
+              id: fndId,
+              title: vuln.title,
+              severity: vuln.severity,
+              asset: asset.name,
+              status: 'Open',
+              owner: asset.owner || 'SecOps',
+              description: vuln.description,
+              evidence: vuln.evidence,
+              recommendations: vuln.recommendations,
+              tenantId: campaign.tenantId
+            }
+          });
+        }
+
+        findings += assetFindings.length;
+        progress += progressPerAsset;
+        if (i === assets.length - 1) progress = 100;
+
+        // Simulate failure retry trigger if the campaign ID has "fail"
+        if (campaignId.includes('fail') && i === 0) {
+          throw new Error('Simulated network scanning failure during scan step.');
+        }
+
+        // Update campaign progress & findings in database
+        await prisma.campaign.update({
+          where: { id: campaignId },
+          data: { progress, findings }
+        });
+
+        console.log(`[Runner] Asset ${asset.id} scan complete. Progress: ${progress}%, total findings: ${findings}`);
       }
-
-      if (currentCampaign.status === 'Completed' || currentCampaign.status === 'Failed') {
-        console.log(`[Runner] Campaign ${campaignId} reached a terminal state externally.`);
-        return;
-      }
-
-      // Simulate step progress
-      progress += 20;
-      if (progress > 100) progress = 100;
-
-      // Simulate finding generation (30% chance at each step)
-      if (Math.random() < 0.3) {
-        findings += 1;
-      }
-
-      // Simulate failure scenario for retries:
-      // If campaign ID contains "fail" and it is currently at progress 60%, throw an error
-      if (campaignId.includes('fail') && progress === 60) {
-        throw new Error('Simulated network scanning failure.');
-      }
-
-      // Update campaign progress & findings in database
-      await prisma.campaign.update({
-        where: { id: campaignId },
-        data: { progress, findings }
-      });
-
-      console.log(`[Runner] Campaign ${campaignId} progress: ${progress}%, findings: ${findings}`);
     }
 
     // Finalize campaign execution
