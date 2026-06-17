@@ -1,42 +1,22 @@
 import express from 'express';
-import prisma from '../config/db.js';
 import { protect } from '../middleware/authMiddleware.js';
 import { checkTenantStatus } from '../middleware/tenantMiddleware.js';
 import { validateRequest } from '../middleware/validationMiddleware.js';
-import { createCampaignSchema } from '../utils/validationSchemas.js';
+import { createCampaignSchema, campaignActionSchema } from '../utils/validationSchemas.js';
+import {
+  getCampaigns,
+  createCampaign,
+  startCampaign,
+  pauseCampaign,
+  stopCampaign
+} from '../controllers/campaignsController.js';
 
 const router = express.Router();
 
-router.get('/', protect, checkTenantStatus, async (req, res, next) => {
-  try {
-    const campaigns = await prisma.campaign.findMany({
-      where: { tenantId: req.user.tenantId }
-    });
-    res.json({ success: true, data: campaigns });
-  } catch (error) {
-    next(error);
-  }
-});
-
-router.post('/', protect, checkTenantStatus, validateRequest(createCampaignSchema), async (req, res, next) => {
-  try {
-    const { id, name, status, progress, findings } = req.body;
-
-    const campaign = await prisma.campaign.create({
-      data: {
-        id,
-        name,
-        status,
-        progress,
-        findings,
-        tenantId: req.user.tenantId
-      }
-    });
-
-    res.status(201).json({ success: true, data: campaign });
-  } catch (error) {
-    next(error);
-  }
-});
+router.get('/', protect, checkTenantStatus, getCampaigns);
+router.post('/', protect, checkTenantStatus, validateRequest(createCampaignSchema), createCampaign);
+router.post('/start', protect, checkTenantStatus, validateRequest(campaignActionSchema), startCampaign);
+router.post('/pause', protect, checkTenantStatus, validateRequest(campaignActionSchema), pauseCampaign);
+router.post('/stop', protect, checkTenantStatus, validateRequest(campaignActionSchema), stopCampaign);
 
 export default router;

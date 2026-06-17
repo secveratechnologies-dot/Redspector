@@ -33,3 +33,10 @@ export const createAssetSchema = {
     risk: { required: true }
   }
 };
+
+export const campaignActionSchema = {
+  type: 'body',
+  rules: {
+    id: { required: true }
+  }
+};
