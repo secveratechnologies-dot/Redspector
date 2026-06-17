@@ -2,6 +2,8 @@ import app from './app.js';
 import dotenv from 'dotenv';
 import prisma from './config/db.js';
 import redis from './config/redis.js';
+import { startQueueWorker, stopQueueWorker } from './queue/campaignQueue.js';
+import { startScheduler, stopScheduler } from './queue/scheduler.js';
 
 dotenv.config();
 
@@ -17,8 +19,16 @@ const startServer = async () => {
       console.log(`[Server] Listening in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
     });
 
+    // Start background queue worker and scheduler
+    await startQueueWorker();
+    startScheduler();
+
     const shutdown = async () => {
       console.log('[Server] Beginning graceful termination...');
+      // Stop queue worker and scheduler
+      stopQueueWorker();
+      stopScheduler();
+
       server.close(async () => {
         await prisma.$disconnect();
         console.log('[PostgreSQL] Connections disconnected.');

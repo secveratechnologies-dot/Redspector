@@ -1,4 +1,5 @@
 import prisma from '../config/db.js';
+import { enqueueCampaign } from '../queue/campaignQueue.js';
 
 const VALID_STATES = ['Draft', 'Pending', 'Approved', 'Running', 'Paused', 'Completed', 'Failed'];
 
@@ -73,10 +74,20 @@ export const startCampaign = async (req, res, next) => {
       });
     }
 
+    if (['Pending', 'Running'].includes(campaign.status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Campaign is already running or queued'
+      });
+    }
+
+    // Set to Pending and enqueue in the Redis-backed execution queue
     const updated = await prisma.campaign.update({
       where: { id },
-      data: { status: 'Running' }
+      data: { status: 'Pending' }
     });
+
+    await enqueueCampaign(id);
 
     res.json({ success: true, data: updated });
   } catch (error) {
