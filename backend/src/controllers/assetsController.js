@@ -2,7 +2,7 @@ import prisma from '../config/db.js';
 
 export const createAsset = async (req, res, next) => {
   try {
-    const { id, name, type, owner, risk } = req.body;
+    const { id, name, type, owner, risk, cves } = req.body;
     const tenantId = req.user.tenantId;
 
     // Validate asset type constraints
@@ -33,7 +33,8 @@ export const createAsset = async (req, res, next) => {
         type,
         owner,
         risk,
-        tenantId
+        tenantId,
+        cves: cves || []
       }
     });
 
