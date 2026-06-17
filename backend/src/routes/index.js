@@ -9,6 +9,8 @@ import reportsRoutes from './reportsRoutes.js';
 import cvesRoutes from './cvesRoutes.js';
 import kevRoutes from './kevRoutes.js';
 import threatsRoutes from './threatsRoutes.js';
+import evidenceRoutes from './evidenceRoutes.js';
+import artifactsRoutes from './artifactsRoutes.js';
 
 const router = express.Router();
 
@@ -22,5 +24,7 @@ router.use('/reports', reportsRoutes);
 router.use('/cves', cvesRoutes);
 router.use('/kev', kevRoutes);
 router.use('/threats', threatsRoutes);
+router.use('/evidence', evidenceRoutes);
+router.use('/artifacts', artifactsRoutes);
 
 export default router;

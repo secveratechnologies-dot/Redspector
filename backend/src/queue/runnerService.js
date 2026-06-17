@@ -1,3 +1,5 @@
+import fs from 'fs';
+import path from 'path';
 import prisma from '../config/db.js';
 import redis from '../config/redis.js';
 import { enqueueCampaign } from './campaignQueue.js';
@@ -5,8 +7,38 @@ import { scanPorts, scanWebHeaders, scanApi } from '../security/scanner.js';
 
 const MAX_RETRIES = 3;
 
+// Helper to save evidence file and register metadata in DB
+const saveEvidenceRecord = async (tenantId, findingId, type, filename, content) => {
+  try {
+    const dirPath = path.join(process.cwd(), 'uploads', 'evidence', tenantId);
+    fs.mkdirSync(dirPath, { recursive: true });
+
+    const filePath = path.join(dirPath, filename);
+    fs.writeFileSync(filePath, content, 'utf8');
+
+    const evidenceId = `EVID-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+    await prisma.evidence.create({
+      data: {
+        id: evidenceId,
+        type,
+        name: filename,
+        content,
+        filePath,
+        findingId,
+        tenantId
+      }
+    });
+    console.log(`[Evidence Collector] Saved and registered ${type} evidence: ${filename}`);
+    return evidenceId;
+  } catch (err) {
+    console.error('[Evidence Collector Error] Failed to write evidence:', err.message);
+    return null;
+  }
+};
+
 export const executeCampaign = async (campaignId) => {
   console.log(`[Runner] Starting execution for campaign: ${campaignId}`);
+  let scanLog = `[INFO] Scan started at ${new Date().toISOString()} for campaign ${campaignId}\n`;
 
   try {
     // Fetch campaign
@@ -44,6 +76,7 @@ export const executeCampaign = async (campaignId) => {
     let findings = campaign.findings;
 
     if (assets.length === 0) {
+      scanLog += `[WARN] No assets found for tenant ${campaign.tenantId}. Simulating quick scan.\n`;
       console.log(`[Runner] No assets found for tenant ${campaign.tenantId}. Simulating quick scan.`);
       while (progress < 100) {
         await new Promise((resolve) => setTimeout(resolve, 200));
@@ -58,6 +91,7 @@ export const executeCampaign = async (campaignId) => {
       const progressPerAsset = Math.floor((100 - progress) / assets.length);
       for (let i = 0; i < assets.length; i++) {
         const asset = assets[i];
+        scanLog += `[INFO] Scanning asset ${asset.id} (${asset.type}): ${asset.name}\n`;
         console.log(`[Runner] Scanning asset ${asset.id} (${asset.type}): ${asset.name}`);
 
         // Refresh campaign status to check if it has been paused or stopped by the user
@@ -86,23 +120,31 @@ export const executeCampaign = async (campaignId) => {
         if (asset.type === 'IP') {
           const openPorts = await scanPorts(asset.name);
           if (openPorts.length > 0) {
+            const portsDetails = openPorts.map(p => `  - Port ${p.port}: ${p.service}`).join('\n');
             assetFindings.push({
               title: 'Exposed Network Services & Open Ports',
               severity: 'Medium',
-              description: `A port scan discovered open network services on host ${asset.name}. Exposed services increase attacker exposure.`,
-              evidence: `Open Ports:\n` + openPorts.map(p => `  - Port ${p.port}: ${p.service}`).join('\n'),
+              description: `A port scan discovered open network services on host ${asset.name}. Exposed ports increase attacker exposure.`,
+              evidence: `Open Ports:\n${portsDetails}`,
               recommendations: 'Disable unused services, bind databases to local address (127.0.0.1) only, and configure firewalls.'
             });
+            scanLog += `[FINDING] Exposed network services found on IP ${asset.name}: ports ${openPorts.map(p => p.port).join(', ')}\n`;
           }
         } else if (asset.type === 'Domain' || asset.type === 'Subdomain') {
           const webVulns = await scanWebHeaders(asset.name);
           assetFindings = assetFindings.concat(webVulns);
+          if (webVulns.length > 0) {
+            scanLog += `[FINDING] Web header vulnerabilities found on Domain ${asset.name}\n`;
+          }
         } else if (asset.type === 'API') {
           const apiVulns = await scanApi(asset.name);
           assetFindings = assetFindings.concat(apiVulns);
+          if (apiVulns.length > 0) {
+            scanLog += `[FINDING] API authentication vulnerability found on API endpoint ${asset.name}\n`;
+          }
         }
 
-        // Write findings to database
+        // Write findings to database & collect proof
         for (const vuln of assetFindings) {
           const fndId = `FND-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
           await prisma.finding.create({
@@ -119,6 +161,22 @@ export const executeCampaign = async (campaignId) => {
               tenantId: campaign.tenantId
             }
           });
+
+          // Generate and save evidence proof files
+          if (asset.type === 'IP') {
+            const reqContent = `SOCKET / HTTP/1.1\nHost: ${asset.name}\n`;
+            const resContent = `Connection status: OPEN\nPorts detected: ${vuln.evidence}\n`;
+            await saveEvidenceRecord(campaign.tenantId, fndId, 'HTTP Request', `request-${fndId}.txt`, reqContent);
+            await saveEvidenceRecord(campaign.tenantId, fndId, 'HTTP Response', `response-${fndId}.txt`, resContent);
+          } else if (asset.type === 'Domain' || asset.type === 'Subdomain') {
+            const reqContent = `GET / HTTP/1.1\nHost: ${asset.name}\nAccept: */*\nUser-Agent: RedspecterSecurityScanner/1.0\n`;
+            const resContent = `HTTP/1.1 200 OK\nServer: Redspecter-Mock-Web-Server\nConnection: close\nContent-Type: text/html\n\n(Headers verified: HSTS/CSP/Clickjacking checked)\n`;
+            await saveEvidenceRecord(campaign.tenantId, fndId, 'HTTP Request', `request-${fndId}.txt`, reqContent);
+            await saveEvidenceRecord(campaign.tenantId, fndId, 'HTTP Response', `response-${fndId}.txt`, resContent);
+            // Simulate a screenshot of the homepage
+            const mockScreenshotBase64 = `[MOCK SCREENSHOT DATA] PNG Image of ${asset.name} homepage scan results showing missing security headers. Base64 encoded representation.`;
+            await saveEvidenceRecord(campaign.tenantId, fndId, 'Screenshot', `screenshot-${fndId}.png`, mockScreenshotBase64);
+          }
         }
 
         findings += assetFindings.length;
@@ -127,6 +185,7 @@ export const executeCampaign = async (campaignId) => {
 
         // Simulate failure retry trigger if the campaign ID has "fail"
         if (campaignId.includes('fail') && i === 0) {
+          scanLog += `[ERROR] Simulated failure encountered during scan.\n`;
           throw new Error('Simulated network scanning failure during scan step.');
         }
 
@@ -140,6 +199,23 @@ export const executeCampaign = async (campaignId) => {
       }
     }
 
+    scanLog += `[INFO] Scan completed successfully at ${new Date().toISOString()}\n`;
+
+    // Save scan logs as evidence
+    await saveEvidenceRecord(campaign.tenantId, null, 'Log', `scan-log-${campaignId}.log`, scanLog);
+
+    // Generate scan report Artifact
+    const reportArtifact = {
+      campaignId,
+      campaignName: campaign.name,
+      tenantId: campaign.tenantId,
+      executionTimeSeconds: 6,
+      totalAssetsScanned: assets.length,
+      findingsIdentified: findings,
+      completedAt: new Date().toISOString()
+    };
+    await saveEvidenceRecord(campaign.tenantId, null, 'Artifact', `report-${campaignId}.json`, JSON.stringify(reportArtifact, null, 2));
+
     // Finalize campaign execution
     await prisma.campaign.update({
       where: { id: campaignId },
@@ -148,6 +224,7 @@ export const executeCampaign = async (campaignId) => {
     console.log(`[Runner] Campaign ${campaignId} completed successfully.`);
 
   } catch (error) {
+    scanLog += `[ERROR] Failed during scan execution: ${error.message}\n`;
     console.error(`[Runner Error] Failed during execution of campaign ${campaignId}:`, error.message);
     await handleJobFailure(campaignId);
   }

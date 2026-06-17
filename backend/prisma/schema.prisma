@@ -16,6 +16,7 @@ model Tenant {
   campaigns Campaign[]
   assets    Asset[]
   findings  Finding[]
+  evidence  Evidence[]
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 }
@@ -106,4 +107,17 @@ model Cve {
   mitreAttack String[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model Evidence {
+  id         String   @id
+  type       String   // "Screenshot", "Log", "HTTP Request", "HTTP Response", "Artifact"
+  name       String
+  content    String?  @db.Text
+  filePath   String?
+  findingId  String?
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }
