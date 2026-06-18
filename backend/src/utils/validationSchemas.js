@@ -40,3 +40,15 @@ export const campaignActionSchema = {
     id: { required: true }
   }
 };
+
+export const createFindingSchema = {
+  type: 'body',
+  rules: {
+    id: { required: true },
+    title: { required: true },
+    severity: { required: true },
+    asset: { required: true },
+    status: { required: true }
+  }
+};
+

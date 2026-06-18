@@ -1,48 +1,22 @@
 import express from 'express';
-import prisma from '../config/db.js';
 import { protect } from '../middleware/authMiddleware.js';
 import { checkTenantStatus } from '../middleware/tenantMiddleware.js';
+import { validateRequest } from '../middleware/validationMiddleware.js';
+import { createFindingSchema } from '../utils/validationSchemas.js';
+import {
+  createFinding,
+  getFindings,
+  getFindingById,
+  updateFinding,
+  deleteFinding
+} from '../controllers/findingsController.js';
 
 const router = express.Router();
 
-router.get('/', protect, checkTenantStatus, async (req, res, next) => {
-  try {
-    const findings = await prisma.finding.findMany({
-      where: { tenantId: req.user.tenantId }
-    });
-    res.json({ success: true, data: findings });
-  } catch (error) {
-    next(error);
-  }
-});
-
-router.post('/', protect, checkTenantStatus, async (req, res, next) => {
-  try {
-    const { id, title, severity, asset, status, owner, description, evidence, recommendations } = req.body;
-    
-    if (!id || !title || !severity || !asset || !status) {
-      return res.status(400).json({ success: false, message: 'Missing required finding fields' });
-    }
-
-    const finding = await prisma.finding.create({
-      data: {
-        id,
-        title,
-        severity,
-        asset,
-        status,
-        owner,
-        description,
-        evidence,
-        recommendations,
-        tenantId: req.user.tenantId
-      }
-    });
-
-    res.status(201).json({ success: true, data: finding });
-  } catch (error) {
-    next(error);
-  }
-});
+router.get('/', protect, checkTenantStatus, getFindings);
+router.post('/', protect, checkTenantStatus, validateRequest(createFindingSchema), createFinding);
+router.get('/:id', protect, checkTenantStatus, getFindingById);
+router.put('/:id', protect, checkTenantStatus, updateFinding);
+router.delete('/:id', protect, checkTenantStatus, deleteFinding);
 
 export default router;
