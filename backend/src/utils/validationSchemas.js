@@ -68,5 +68,22 @@ export const mfaVerifySchema = {
   }
 };
 
+export const plannerGenerateSchema = {
+  type: 'body',
+  rules: {
+    assets: { required: true },
+    threats: { required: true },
+    criticality: { required: true }
+  }
+};
+
+export const plannerValidateSchema = {
+  type: 'body',
+  rules: {
+    plan: { required: true }
+  }
+};
+
+
 
 
