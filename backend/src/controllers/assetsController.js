@@ -1,5 +1,6 @@
 import prisma from '../config/db.js';
 import { logAudit } from '../utils/auditLogger.js';
+import { indexDocument } from '../services/ragService.js';
 
 export const createAsset = async (req, res, next) => {
   try {
@@ -39,6 +40,7 @@ export const createAsset = async (req, res, next) => {
       }
     });
 
+    // Write audit logs
     await logAudit({
       action: 'ASSET_CREATED',
       userId: req.user.id,
@@ -46,6 +48,15 @@ export const createAsset = async (req, res, next) => {
       tenantId,
       ipAddress: req.ip || req.socket.remoteAddress,
       details: { assetId: id, name, type, risk }
+    });
+
+    // Automatically index asset context into the RAG Vector Database
+    const assetContent = `Asset: ${name} (Type: ${type}, Owner: ${owner || 'N/A'}, Risk: ${risk}, CVEs: ${(cves || []).join(', ') || 'None'})`;
+    await indexDocument({
+      source: 'Asset',
+      sourceId: id,
+      content: assetContent,
+      tenantId
     });
 
     res.status(201).json({ success: true, data: asset });

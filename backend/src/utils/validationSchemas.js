@@ -84,6 +84,23 @@ export const plannerValidateSchema = {
   }
 };
 
+export const ragContextSchema = {
+  type: 'body',
+  rules: {
+    source: { required: true },
+    sourceId: { required: true },
+    content: { required: true }
+  }
+};
+
+export const ragSearchSchema = {
+  type: 'body',
+  rules: {
+    query: { required: true }
+  }
+};
+
+
 
 
 

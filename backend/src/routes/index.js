@@ -13,6 +13,7 @@ import evidenceRoutes from './evidenceRoutes.js';
 import artifactsRoutes from './artifactsRoutes.js';
 import auditRoutes from './auditRoutes.js';
 import plannerRoutes from './plannerRoutes.js';
+import ragRoutes from './ragRoutes.js';
 
 const router = express.Router();
 
@@ -30,5 +31,6 @@ router.use('/evidence', evidenceRoutes);
 router.use('/artifacts', artifactsRoutes);
 router.use('/audit-logs', auditRoutes);
 router.use('/planner', plannerRoutes);
+router.use('/rag', ragRoutes);
 
 export default router;

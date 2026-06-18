@@ -1,5 +1,6 @@
 import prisma from '../config/db.js';
 import { logAudit } from '../utils/auditLogger.js';
+import { indexDocument } from '../services/ragService.js';
 
 const ALLOWED_STATUSES = ['Open', 'Verified', 'Resolved', 'Closed'];
 const ALLOWED_SEVERITIES = ['Critical', 'High', 'Medium', 'Low', 'Info'];
@@ -50,6 +51,15 @@ export const createFinding = async (req, res, next) => {
       tenantId,
       ipAddress: req.ip || req.socket.remoteAddress,
       details: { findingId: id, title, severity }
+    });
+
+    // Automatically index finding context into the RAG Vector Database
+    const findingContent = `Finding: ${title} (Severity: ${severity}, Asset: ${asset}, Status: ${status}, Description: ${description || 'None'}, Recommendations: ${recommendations || 'None'})`;
+    await indexDocument({
+      source: 'Finding',
+      sourceId: id,
+      content: findingContent,
+      tenantId
     });
 
     res.status(201).json({ success: true, data: finding });
@@ -176,6 +186,15 @@ export const updateFinding = async (req, res, next) => {
       details: { findingId: id, status, severity, title }
     });
 
+    // Update RAG vector context with the fresh updates
+    const findingContent = `Finding: ${updatedFinding.title} (Severity: ${updatedFinding.severity}, Asset: ${updatedFinding.asset}, Status: ${updatedFinding.status}, Description: ${updatedFinding.description || 'None'}, Recommendations: ${updatedFinding.recommendations || 'None'})`;
+    await indexDocument({
+      source: 'Finding',
+      sourceId: id,
+      content: findingContent,
+      tenantId
+    });
+
     res.json({ success: true, data: updatedFinding });
   } catch (error) {
     next(error);
@@ -204,6 +223,11 @@ export const deleteFinding = async (req, res, next) => {
       tenantId,
       ipAddress: req.ip || req.socket.remoteAddress,
       details: { findingId: id, title: existingFinding.title }
+    });
+
+    // Prune context representation from RAG store
+    await prisma.vectorDocument.deleteMany({
+      where: { source: 'Finding', sourceId: id, tenantId }
     });
 
     res.json({ success: true, message: 'Finding deleted successfully' });
