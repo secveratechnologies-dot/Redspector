@@ -1,4 +1,5 @@
 import prisma from '../config/db.js';
+import { logAudit } from '../utils/auditLogger.js';
 
 const ALLOWED_STATUSES = ['Open', 'Verified', 'Resolved', 'Closed'];
 const ALLOWED_SEVERITIES = ['Critical', 'High', 'Medium', 'Low', 'Info'];
@@ -40,6 +41,15 @@ export const createFinding = async (req, res, next) => {
         recommendations,
         tenantId
       }
+    });
+
+    await logAudit({
+      action: 'FINDING_CREATED',
+      userId: req.user.id,
+      userEmail: req.user.email,
+      tenantId,
+      ipAddress: req.ip || req.socket.remoteAddress,
+      details: { findingId: id, title, severity }
     });
 
     res.status(201).json({ success: true, data: finding });
@@ -157,6 +167,15 @@ export const updateFinding = async (req, res, next) => {
       }
     });
 
+    await logAudit({
+      action: 'FINDING_UPDATED',
+      userId: req.user.id,
+      userEmail: req.user.email,
+      tenantId,
+      ipAddress: req.ip || req.socket.remoteAddress,
+      details: { findingId: id, status, severity, title }
+    });
+
     res.json({ success: true, data: updatedFinding });
   } catch (error) {
     next(error);
@@ -177,6 +196,16 @@ export const deleteFinding = async (req, res, next) => {
     }
 
     await prisma.finding.delete({ where: { id } });
+
+    await logAudit({
+      action: 'FINDING_DELETED',
+      userId: req.user.id,
+      userEmail: req.user.email,
+      tenantId,
+      ipAddress: req.ip || req.socket.remoteAddress,
+      details: { findingId: id, title: existingFinding.title }
+    });
+
     res.json({ success: true, message: 'Finding deleted successfully' });
   } catch (error) {
     next(error);

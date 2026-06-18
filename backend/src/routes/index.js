@@ -11,6 +11,7 @@ import kevRoutes from './kevRoutes.js';
 import threatsRoutes from './threatsRoutes.js';
 import evidenceRoutes from './evidenceRoutes.js';
 import artifactsRoutes from './artifactsRoutes.js';
+import auditRoutes from './auditRoutes.js';
 
 const router = express.Router();
 
@@ -26,5 +27,6 @@ router.use('/kev', kevRoutes);
 router.use('/threats', threatsRoutes);
 router.use('/evidence', evidenceRoutes);
 router.use('/artifacts', artifactsRoutes);
+router.use('/audit-logs', auditRoutes);
 
 export default router;

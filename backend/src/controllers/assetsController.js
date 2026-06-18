@@ -1,4 +1,5 @@
 import prisma from '../config/db.js';
+import { logAudit } from '../utils/auditLogger.js';
 
 export const createAsset = async (req, res, next) => {
   try {
@@ -36,6 +37,15 @@ export const createAsset = async (req, res, next) => {
         tenantId,
         cves: cves || []
       }
+    });
+
+    await logAudit({
+      action: 'ASSET_CREATED',
+      userId: req.user.id,
+      userEmail: req.user.email,
+      tenantId,
+      ipAddress: req.ip || req.socket.remoteAddress,
+      details: { assetId: id, name, type, risk }
     });
 
     res.status(201).json({ success: true, data: asset });

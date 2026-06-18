@@ -1,4 +1,5 @@
 import prisma from '../config/db.js';
+import { logAudit } from '../utils/auditLogger.js';
 
 const ALLOWED_TYPES = ['executive', 'technical', 'risk'];
 const ALLOWED_FORMATS = ['json', 'csv', 'pdf'];
@@ -156,6 +157,15 @@ export const generateReport = async (req, res, next) => {
     const title = reportTitleMap[type];
     const timestamp = new Date().toISOString();
 
+    await logAudit({
+      action: 'REPORT_GENERATED',
+      userId: req.user.id,
+      userEmail: req.user.email,
+      tenantId,
+      ipAddress: req.ip || req.socket.remoteAddress,
+      details: { type, format, scope }
+    });
+
     if (format === 'json') {
       return res.json({
         success: true,
@@ -254,6 +264,15 @@ export const createJiraTicket = async (req, res, next) => {
     const jiraKey = `SEC-${Math.floor(1000 + Math.random() * 9000)}`;
 
     console.log(`[JIRA INTEGRATION] Ticket ${jiraKey} created for finding ${findingId} (${finding.title})`);
+
+    await logAudit({
+      action: 'JIRA_TICKET_CREATED',
+      userId: req.user.id,
+      userEmail: req.user.email,
+      tenantId,
+      ipAddress: req.ip || req.socket.remoteAddress,
+      details: { findingId, jiraTicket: jiraKey }
+    });
 
     res.status(201).json({
       success: true,

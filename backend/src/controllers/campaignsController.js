@@ -1,5 +1,6 @@
 import prisma from '../config/db.js';
 import { enqueueCampaign } from '../queue/campaignQueue.js';
+import { logAudit } from '../utils/auditLogger.js';
 
 const VALID_STATES = ['Draft', 'Pending', 'Approved', 'Running', 'Paused', 'Completed', 'Failed'];
 
@@ -48,6 +49,15 @@ export const createCampaign = async (req, res, next) => {
       }
     });
 
+    await logAudit({
+      action: 'CAMPAIGN_CREATED',
+      userId: req.user.id,
+      userEmail: req.user.email,
+      tenantId,
+      ipAddress: req.ip || req.socket.remoteAddress,
+      details: { campaignId: id, name, status }
+    });
+
     res.status(201).json({ success: true, data: campaign });
   } catch (error) {
     next(error);
@@ -89,6 +99,15 @@ export const startCampaign = async (req, res, next) => {
 
     await enqueueCampaign(id);
 
+    await logAudit({
+      action: 'CAMPAIGN_STARTED',
+      userId: req.user.id,
+      userEmail: req.user.email,
+      tenantId,
+      ipAddress: req.ip || req.socket.remoteAddress,
+      details: { campaignId: id, name: campaign.name }
+    });
+
     res.json({ success: true, data: updated });
   } catch (error) {
     next(error);
@@ -122,6 +141,15 @@ export const pauseCampaign = async (req, res, next) => {
     const updated = await prisma.campaign.update({
       where: { id },
       data: { status: 'Paused' }
+    });
+
+    await logAudit({
+      action: 'CAMPAIGN_PAUSED',
+      userId: req.user.id,
+      userEmail: req.user.email,
+      tenantId,
+      ipAddress: req.ip || req.socket.remoteAddress,
+      details: { campaignId: id, name: campaign.name }
     });
 
     res.json({ success: true, data: updated });
@@ -161,6 +189,15 @@ export const stopCampaign = async (req, res, next) => {
     const updated = await prisma.campaign.update({
       where: { id },
       data: { status: targetStatus }
+    });
+
+    await logAudit({
+      action: 'CAMPAIGN_STOPPED',
+      userId: req.user.id,
+      userEmail: req.user.email,
+      tenantId,
+      ipAddress: req.ip || req.socket.remoteAddress,
+      details: { campaignId: id, name: campaign.name, targetStatus }
     });
 
     res.json({ success: true, data: updated });

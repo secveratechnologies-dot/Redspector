@@ -59,4 +59,14 @@ export const jiraIntegrationSchema = {
   }
 };
 
+export const mfaVerifySchema = {
+  type: 'body',
+  rules: {
+    email: { required: true, type: 'email' },
+    password: { required: true },
+    code: { required: true }
+  }
+};
+
+
 

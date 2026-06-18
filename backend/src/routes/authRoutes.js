@@ -5,10 +5,13 @@ import {
   logout,
   refresh,
   requestPasswordReset,
-  resetPassword
+  resetPassword,
+  mfaSetup,
+  verifyMfa
 } from '../controllers/authController.js';
+import { protect } from '../middleware/authMiddleware.js';
 import { validateRequest } from '../middleware/validationMiddleware.js';
-import { registerSchema, loginSchema } from '../utils/validationSchemas.js';
+import { registerSchema, loginSchema, mfaVerifySchema } from '../utils/validationSchemas.js';
 
 const router = express.Router();
 
@@ -18,5 +21,8 @@ router.post('/logout', logout);
 router.post('/refresh', refresh);
 router.post('/reset-password-request', requestPasswordReset);
 router.post('/reset-password', resetPassword);
+
+router.post('/mfa/setup', protect, mfaSetup);
+router.post('/mfa/verify', validateRequest(mfaVerifySchema), verifyMfa);
 
 export default router;
