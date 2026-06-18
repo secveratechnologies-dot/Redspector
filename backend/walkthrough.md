@@ -511,3 +511,56 @@ We wrote and executed an integration test script [verify_enterprise_sec.sh](file
 - Querying Tenant A's audit logs returned exactly 9 entries (including `USER_REGISTERED`, `LOGIN_SUCCESS`, `MFA_SETUP`, `MFA_VERIFY_FAILURE`, and `MFA_VERIFY_SUCCESS`).
 - Querying Tenant B's audit logs returned exactly 11 entries (mostly `LOGIN_FAILURE` attempts).
 - Tenant isolation verified: Alice's logs contained zero records regarding Bob, and Bob's logs contained zero records regarding Alice, verifying strict tenancy isolation.
+
+---
+
+# Phase 14: AI Planner Foundation Walkthrough
+
+This walkthrough details the implementation of Phase 14: AI Planner Foundation, which automatically generates contextual security testing campaigns and validates testing plan coverage and semantic tool alignment under tenancy constraints.
+
+## Changes Made
+
+### 1. Core Planning & LLM Engine
+- **[llmClient.js](file:///Users/sanikasadre/Downloads/backend/src/utils/llmClient.js)**: Implemented the LLM client context assembler. It processes asset matrices, CVE threat intelligence lists, and system criticality thresholds to generate a tailored JSON security testing plan.
+- **[plannerController.js](file:///Users/sanikasadre/Downloads/backend/src/controllers/plannerController.js)**:
+  - `generatePlan`: Accepts assets, threats, and criticality context. Invokes the LLM client engine and issues a structured campaign plan.
+  - `validatePlan`: Performs a detailed audit checking plan format validity, verifying tool-target alignments (checks that port scanners are used for IPs, headers analyzers for web targets, and auth probes for API assets), and checking for omitted high-risk asset coverage.
+
+### 2. Validation Schemas & Routing Bindings
+- **[validationSchemas.js](file:///Users/sanikasadre/Downloads/backend/src/utils/validationSchemas.js)**: Registered validation structures `plannerGenerateSchema` and `plannerValidateSchema` to verify input payload layouts.
+- **[plannerRoutes.js](file:///Users/sanikasadre/Downloads/backend/src/routes/plannerRoutes.js)**: Exposed plan generation and validation API endpoints:
+  - `POST /generate` -> `generatePlan`
+  - `POST /validate` -> `validatePlan`
+- **[index.js](file:///Users/sanikasadre/Downloads/backend/src/routes/index.js)**: Mounted `/planner` routes.
+
+### 3. Database Audit Logging
+- **[plannerController.js](file:///Users/sanikasadre/Downloads/backend/src/controllers/plannerController.js)**: Integrated audit log hooks. Generates `PLANNER_PLAN_GENERATED` and `PLANNER_PLAN_VALIDATED` audit trail entries scoped strictly inside the tenant scope.
+
+---
+
+## Verification Results
+
+We wrote and executed an integration test script [verify_planner.sh](file:///Users/sanikasadre/Downloads/backend/verify_planner.sh). The test output shows all items passing successfully:
+
+### 1. Contextual Security Testing Plan Generation
+- Triggering `POST /api/planner/generate` with an asset array and a threat list returns **HTTP 200 OK** containing:
+  - `campaignName`: `"Security Campaign [High] - 2026-06-18"`
+  - `summary`: A summary detailing targeted assets and threat counts.
+  - `steps`: Tailored validation steps matching asset types (e.g. mapping the IP target to the `Port Scanner` tool and the Domain target to the `Web Headers Analyzer` tool).
+
+### 2. Semantic Tool-Target Validation Checks
+- Querying validation with the correctly generated plan succeeded with `isValid: true`.
+- Modifying the IP target's scanning tool to `API Auth Probe` (mismatch) returned `isValid: false` with the validation error:
+  - `"Step STEP-01 target '10.0.0.1' is an IP but uses tool 'API Auth Probe' instead of 'Port Scanner'"`
+
+### 3. Critical Threat Coverage Audits
+- Sending a validation request omitting the high-risk IP asset step returned `isValid: true` but recommended:
+  - `"Asset '10.0.0.1' is rated High risk but is not covered by any steps in the testing plan"`
+
+### 4. Tenancy Audit Logging
+- Verifying the database audit log trail returned 4 newly created planner entries:
+  - Action `PLANNER_PLAN_GENERATED`
+  - Action `PLANNER_PLAN_VALIDATED` (Valid check)
+  - Action `PLANNER_PLAN_VALIDATED` (Mismatched tool check)
+  - Action `PLANNER_PLAN_VALIDATED` (Omitted asset check)
+
