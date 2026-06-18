@@ -52,3 +52,11 @@ export const createFindingSchema = {
   }
 };
 
+export const jiraIntegrationSchema = {
+  type: 'body',
+  rules: {
+    findingId: { required: true }
+  }
+};
+
+
