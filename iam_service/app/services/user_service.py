@@ -8,6 +8,7 @@ from app.domain.schemas import UserCreate
 from app.core.security import get_password_hash
 from app.core.exceptions import ObjectAlreadyExistsException, ObjectNotFoundException
 from app.services.tenant_service import get_tenant_by_id
+from app.infrastructure.messaging.kafka_publisher import event_publisher
 
 async def create_user(db: AsyncSession, user_in: UserCreate) -> User:
     # Verify tenant exists first
@@ -24,6 +25,19 @@ async def create_user(db: AsyncSession, user_in: UserCreate) -> User:
     try:
         await db.commit()
         await db.refresh(db_user)
+        
+        # Publish event
+        await event_publisher.publish(
+            topic="iam.events",
+            event_type="UserCreated",
+            data={
+                "id": str(db_user.id), 
+                "email": db_user.email,
+                "tenant_id": str(db_user.tenant_id),
+                "role": db_user.role
+            }
+        )
+        
         return db_user
     except IntegrityError:
         await db.rollback()

@@ -6,6 +6,7 @@ import uuid
 from app.infrastructure.database.models import Tenant
 from app.domain.schemas import TenantCreate
 from app.core.exceptions import ObjectAlreadyExistsException, ObjectNotFoundException
+from app.infrastructure.messaging.kafka_publisher import event_publisher
 
 async def create_tenant(db: AsyncSession, tenant_in: TenantCreate) -> Tenant:
     db_tenant = Tenant(name=tenant_in.name)
@@ -13,6 +14,14 @@ async def create_tenant(db: AsyncSession, tenant_in: TenantCreate) -> Tenant:
     try:
         await db.commit()
         await db.refresh(db_tenant)
+        
+        # Publish event
+        await event_publisher.publish(
+            topic="iam.events",
+            event_type="TenantCreated",
+            data={"id": str(db_tenant.id), "name": db_tenant.name}
+        )
+        
         return db_tenant
     except IntegrityError:
         await db.rollback()

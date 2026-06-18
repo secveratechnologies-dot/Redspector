@@ -7,3 +7,4 @@ asyncpg>=0.29.0
 alembic>=1.13.1
 passlib[bcrypt]>=1.7.4
 PyJWT>=2.8.0
+aiokafka>=0.10.0
