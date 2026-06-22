@@ -123,6 +123,14 @@ export const riskCalculateSchema = {
   }
 };
 
+export const aiRecommendationSchema = {
+  type: 'body',
+  rules: {
+    // optional findingId or finding parameters checked inside controller
+  }
+};
+
+
 
 
 
