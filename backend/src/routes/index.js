@@ -16,6 +16,7 @@ import plannerRoutes from './plannerRoutes.js';
 import ragRoutes from './ragRoutes.js';
 import riskRoutes from './riskRoutes.js';
 import aiRecommendationRoutes from './aiRecommendationRoutes.js';
+import aiInsightsRoutes from './aiInsightsRoutes.js';
 
 const router = express.Router();
 
@@ -36,6 +37,7 @@ router.use('/planner', plannerRoutes);
 router.use('/rag', ragRoutes);
 router.use('/risk', riskRoutes);
 router.use('/ai', aiRecommendationRoutes);
+router.use('/ai', aiInsightsRoutes);
 
 export default router;
 

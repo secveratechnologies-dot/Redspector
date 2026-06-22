@@ -1,8 +1,12 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { apiRequest } from '@/lib/api';
-import { AlertTriangle, ShieldCheck, ShieldAlert, Award, Loader2 } from 'lucide-react';
+import {
+  AlertTriangle, ShieldCheck, ShieldAlert, Award, Loader2,
+  Server, Play, BarChart3, Sparkles, Download, ArrowRight
+} from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 
 interface Finding {
@@ -12,6 +16,15 @@ interface Finding {
   asset: string;
   status: string;
 }
+
+const quickLinks = [
+  { href: '/dashboard/assets',      label: 'Assets',       icon: Server,    color: 'text-sky-400',    bg: 'bg-sky-500/10'    },
+  { href: '/dashboard/campaigns',   label: 'Campaigns',    icon: Play,      color: 'text-green-400',  bg: 'bg-green-500/10'  },
+  { href: '/dashboard/findings',    label: 'Findings',     icon: ShieldAlert,color:'text-orange-400', bg: 'bg-orange-500/10' },
+  { href: '/dashboard/risk',        label: 'Risk Intel',   icon: BarChart3, color: 'text-purple-400', bg: 'bg-purple-500/10' },
+  { href: '/dashboard/ai-insights', label: 'AI Insights',  icon: Sparkles,  color: 'text-pink-400',   bg: 'bg-pink-500/10'   },
+  { href: '/dashboard/reports',     label: 'Reports',      icon: Download,  color: 'text-yellow-400', bg: 'bg-yellow-500/10' },
+];
 
 /**
  * Main security overview dashboard page.
@@ -80,12 +93,41 @@ export default function DashboardPage() {
         ))}
       </div>
 
+      {/* Quick navigation */}
+      <div>
+        <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">Quick Access</h3>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          {quickLinks.map(({ href, label, icon: Icon, color, bg }) => (
+            <Link
+              key={href}
+              href={href}
+              className="flex flex-col items-center gap-2 p-4 bg-slate-900 border border-slate-800 rounded-xl hover:border-slate-600 hover:bg-slate-800/60 transition-all group"
+            >
+              <div className={`p-2.5 rounded-lg ${bg}`}>
+                <Icon className={`w-5 h-5 ${color}`} />
+              </div>
+              <span className="text-xs font-semibold text-slate-400 group-hover:text-white transition-colors text-center">
+                {label}
+              </span>
+            </Link>
+          ))}
+        </div>
+      </div>
+
       {/* Critical activity list */}
       <Card className="bg-slate-900 border-slate-800 shadow-md">
         <CardContent className="p-6">
-          <h3 className="text-lg font-bold text-white mb-6">
-            Critical Active Vulnerability Log
-          </h3>
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-bold text-white">
+              Critical Active Vulnerability Log
+            </h3>
+            <Link
+              href="/dashboard/findings"
+              className="flex items-center gap-1 text-xs text-orange-400 hover:text-orange-300 font-semibold transition-colors"
+            >
+              View all <ArrowRight className="w-3 h-3" />
+            </Link>
+          </div>
 
           {error && (
             <p className="text-sm text-red-400 mb-4">{error}</p>
@@ -98,7 +140,7 @@ export default function DashboardPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              {activeFindings.map((finding) => (
+              {activeFindings.slice(0, 10).map((finding) => (
                 <div
                   key={finding.id}
                   className="flex items-center justify-between p-4 border border-slate-800 rounded-xl bg-slate-950/40 hover:border-slate-700 transition-colors"

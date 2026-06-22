@@ -1,13 +1,21 @@
 import express from 'express';
 import { protect } from '../middleware/authMiddleware.js';
 import { checkTenantStatus } from '../middleware/tenantMiddleware.js';
-import { validateRequest } from '../middleware/validationMiddleware.js';
-import { aiInsightsSchema } from '../utils/validationSchemas.js';
 import { getAiInsights } from '../controllers/aiInsightsController.js';
+import { getAiRecommendation } from '../controllers/aiRecommendationController.js';
 
 const router = express.Router();
 
-// Example endpoint for AI recommendations
-router.post('/recommendation', protect, checkTenantStatus, validateRequest(aiInsightsSchema), getAiInsights);
+/**
+ * POST /api/ai/recommendation
+ * Legacy AI recommendation endpoint (finding-centric).
+ */
+router.post('/recommendation', protect, checkTenantStatus, getAiRecommendation);
+
+/**
+ * POST /api/ai/insights
+ * Full AI insights dispatcher: recommendation, attackPath, threatAnalysis, riskExplanation, executiveInsights.
+ */
+router.post('/insights', protect, checkTenantStatus, getAiInsights);
 
 export default router;
