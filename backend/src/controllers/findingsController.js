@@ -1,6 +1,8 @@
 import prisma from '../config/db.js';
 import { logAudit } from '../utils/auditLogger.js';
 import { indexDocument } from '../services/ragService.js';
+import { prioritizeFindings } from '../services/prioritizationService.js';
+
 
 const ALLOWED_STATUSES = ['Open', 'Verified', 'Resolved', 'Closed'];
 const ALLOWED_SEVERITIES = ['Critical', 'High', 'Medium', 'Low', 'Info'];
@@ -231,6 +233,50 @@ export const deleteFinding = async (req, res, next) => {
     });
 
     res.json({ success: true, message: 'Finding deleted successfully' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getPrioritizedFindings = async (req, res, next) => {
+  try {
+    const tenantId = req.user.tenantId;
+
+    const findings = await prisma.finding.findMany({ where: { tenantId } });
+    const assets = await prisma.asset.findMany({ where: { tenantId } });
+
+    const prioritized = await prioritizeFindings({ assets, findings, tenantId });
+
+    // Calculate action counts
+    const fixFirstCount = prioritized.filter(item => item.action === 'Fix First').length;
+    const fixLaterCount = prioritized.filter(item => item.action === 'Fix Later').length;
+    const monitorCount = prioritized.filter(item => item.action === 'Monitor').length;
+
+    await logAudit({
+      action: 'FINDINGS_PRIORITIZED',
+      userId: req.user.id,
+      userEmail: req.user.email,
+      tenantId,
+      ipAddress: req.ip || req.socket.remoteAddress,
+      details: {
+        totalActiveCount: prioritized.length,
+        fixFirst: fixFirstCount,
+        fixLater: fixLaterCount,
+        monitor: monitorCount
+      }
+    });
+
+    res.status(200).json({
+      success: true,
+      data: {
+        queue: prioritized,
+        summary: {
+          fixFirst: fixFirstCount,
+          fixLater: fixLaterCount,
+          monitor: monitorCount
+        }
+      }
+    });
   } catch (error) {
     next(error);
   }
