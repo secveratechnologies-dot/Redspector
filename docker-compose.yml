@@ -32,6 +32,38 @@ services:
       - postgres
       - kafka
 
+  postgres-asset:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: redspecter_asset
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_asset_data:/var/lib/postgresql/data
+
+  asset-service:
+    build:
+      context: ./asset_service
+    ports:
+      - "8001:8001"
+    environment:
+      - PROJECT_NAME=RedSpecter Asset Discovery Service
+      - POSTGRES_SERVER=postgres-asset
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=redspecter_asset
+      - POSTGRES_PORT=5432
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+    volumes:
+      - ./asset_service/app:/app/app
+      - ./asset_service/alembic.ini:/app/alembic.ini
+      - ./asset_service/alembic:/app/alembic
+    depends_on:
+      - postgres-asset
+      - kafka
+
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
     environment:
@@ -56,3 +88,4 @@ services:
 
 volumes:
   postgres_data:
+  postgres_asset_data:
