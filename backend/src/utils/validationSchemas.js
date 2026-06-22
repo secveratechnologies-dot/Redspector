@@ -116,6 +116,14 @@ export const ragSearchSchema = {
   }
 };
 
+export const riskCalculateSchema = {
+  type: 'body',
+  rules: {
+    // optional arrays for dry-run calculate risk
+  }
+};
+
+
 
 
 
