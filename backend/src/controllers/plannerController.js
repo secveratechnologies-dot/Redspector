@@ -1,6 +1,8 @@
 import prisma from '../config/db.js';
-import { generatePlanFromLLM } from '../utils/llmClient.js';
 import { logAudit } from '../utils/auditLogger.js';
+import { runPlanningWorkflow, runRiskAnalysisWorkflow, runRecommendationWorkflow } from '../workflow/workflowEngine.js';
+import { getRunState } from '../workflow/stateManager.js';
+
 
 export const generatePlan = async (req, res, next) => {
   try {
@@ -15,7 +17,7 @@ export const generatePlan = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'threats must be an array' });
     }
 
-    const plan = await generatePlanFromLLM({ assets, threats, criticality });
+    const result = await runPlanningWorkflow({ assets, threats, criticality, tenantId });
 
     await logAudit({
       action: 'PLANNER_PLAN_GENERATED',
@@ -28,12 +30,15 @@ export const generatePlan = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
-      data: plan
+      runId: result.runId,
+      state: result.state,
+      data: result.data
     });
   } catch (error) {
     next(error);
   }
 };
+
 
 export const validatePlan = async (req, res, next) => {
   try {
@@ -111,6 +116,95 @@ export const validatePlan = async (req, res, next) => {
         errors,
         recommendations
       }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const riskAnalysis = async (req, res, next) => {
+  try {
+    const { assets, threats } = req.body;
+    const tenantId = req.user.tenantId;
+
+    if (!Array.isArray(assets)) {
+      return res.status(400).json({ success: false, message: 'assets must be an array' });
+    }
+    if (!Array.isArray(threats)) {
+      return res.status(400).json({ success: false, message: 'threats must be an array' });
+    }
+
+    const result = await runRiskAnalysisWorkflow({ assets, threats, tenantId });
+
+    await logAudit({
+      action: 'PLANNER_RISK_ANALYSIS_GENERATED',
+      userId: req.user.id,
+      userEmail: req.user.email,
+      tenantId,
+      ipAddress: req.ip || req.socket.remoteAddress,
+      details: { assetCount: assets.length, threatCount: threats.length }
+    });
+
+    res.status(200).json({
+      success: true,
+      runId: result.runId,
+      state: result.state,
+      data: result.data
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const recommendations = async (req, res, next) => {
+  try {
+    const { findings } = req.body;
+    const tenantId = req.user.tenantId;
+
+    if (!Array.isArray(findings)) {
+      return res.status(400).json({ success: false, message: 'findings must be an array' });
+    }
+
+    const result = await runRecommendationWorkflow({ findings, tenantId });
+
+    await logAudit({
+      action: 'PLANNER_RECOMMENDATIONS_GENERATED',
+      userId: req.user.id,
+      userEmail: req.user.email,
+      tenantId,
+      ipAddress: req.ip || req.socket.remoteAddress,
+      details: { findingCount: findings.length }
+    });
+
+    res.status(200).json({
+      success: true,
+      runId: result.runId,
+      state: result.state,
+      data: result.data
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getWorkflowRun = async (req, res, next) => {
+  try {
+    const { runId } = req.params;
+    const tenantId = req.user.tenantId;
+
+    const runState = await getRunState(runId);
+    if (!runState) {
+      return res.status(404).json({ success: false, message: 'Workflow run not found' });
+    }
+
+    // Multitenancy validation: verify the requested run belongs to the user's tenant
+    if (runState.tenantId !== tenantId) {
+      return res.status(403).json({ success: false, message: 'Access denied to this workflow run' });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: runState
     });
   } catch (error) {
     next(error);

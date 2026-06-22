@@ -84,6 +84,22 @@ export const plannerValidateSchema = {
   }
 };
 
+export const plannerRiskAnalysisSchema = {
+  type: 'body',
+  rules: {
+    assets: { required: true },
+    threats: { required: true }
+  }
+};
+
+export const plannerRecommendationsSchema = {
+  type: 'body',
+  rules: {
+    findings: { required: true }
+  }
+};
+
+
 export const ragContextSchema = {
   type: 'body',
   rules: {
