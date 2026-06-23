@@ -19,6 +19,8 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "super_secret_key_change_me_in_production_1234567890" # Needs to match IAM service for MVP
     ALGORITHM: str = "HS256"
     
+    KAFKA_BOOTSTRAP_SERVERS: str = "kafka:9092"
+    
     model_config = SettingsConfigDict(env_file=".env", env_ignore_empty=True, extra="ignore")
 
 settings = Settings()
