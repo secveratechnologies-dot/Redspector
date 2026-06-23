@@ -1,0 +1,4 @@
+GET / HTTP/1.1
+Host: 127.0.0.1:5001
+Accept: */*
+User-Agent: RedspecterSecurityScanner/1.0

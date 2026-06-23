@@ -101,7 +101,7 @@ export default function SignupPage() {
                   Full Name
                 </label>
                 <div className="relative">
-                  <User className="absolute left-3 top-3 w-5 h-5 text-slate-500" />
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
                   <Input
                     type="text"
                     value={fullName}
@@ -117,7 +117,7 @@ export default function SignupPage() {
                   Email Address
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-3 w-5 h-5 text-slate-500" />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
                   <Input
                     type="email"
                     value={email}
@@ -133,7 +133,7 @@ export default function SignupPage() {
                   Company Name
                 </label>
                 <div className="relative">
-                  <Building className="absolute left-3 top-3 w-5 h-5 text-slate-500" />
+                  <Building className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
                   <Input
                     type="text"
                     value={companyName}
@@ -149,7 +149,7 @@ export default function SignupPage() {
                   Password
                 </label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-3 w-5 h-5 text-slate-500" />
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
                   <Input
                     type="password"
                     value={password}
@@ -165,7 +165,7 @@ export default function SignupPage() {
                   Confirm Password
                 </label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-3 w-5 h-5 text-slate-500" />
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
                   <Input
                     type="password"
                     value={confirmPassword}

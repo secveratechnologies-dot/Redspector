@@ -1,0 +1,6 @@
+Connection status: OPEN
+Ports detected: Open Ports:
+  - Port 3000: Frontend Application
+  - Port 5001: Redspector Backend API Server
+  - Port 5432: PostgreSQL Database Server
+  - Port 6379: Redis Cache Server

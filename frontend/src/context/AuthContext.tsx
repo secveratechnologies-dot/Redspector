@@ -17,6 +17,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  completeLogin: (userData: User, accessToken: string) => void;
   signup: (email: string, password: string, fullName: string, companyName: string) => Promise<void>;
   logout: () => void;
 }
@@ -71,7 +72,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const res = await apiRequest('/auth/register', {
         method: 'POST',
-        body: JSON.stringify({ email, password, fullName, companyName, role: 'admin' })
+        body: JSON.stringify({ email, password, fullName, companyName, role: 'Tenant Admin' })
       });
       if (res.success) {
         router.push('/login');
@@ -83,6 +84,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const completeLogin = (userData: User, accessToken: string) => {
+    localStorage.setItem('accessToken', accessToken);
+    localStorage.setItem('user', JSON.stringify(userData));
+    setUser(userData);
+    router.push('/dashboard');
+  };
+
   const logout = () => {
     localStorage.clear();
     setUser(null);
@@ -90,7 +98,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, isLoading, login, signup, logout }}>
+    <AuthContext.Provider value={{ user, isAuthenticated: !!user, isLoading, login, completeLogin, signup, logout }}>
       {children}
     </AuthContext.Provider>
   );

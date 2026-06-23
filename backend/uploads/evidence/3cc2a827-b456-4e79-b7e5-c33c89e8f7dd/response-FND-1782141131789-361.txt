@@ -1,0 +1,6 @@
+HTTP/1.1 200 OK
+Server: Redspecter-Mock-Web-Server
+Connection: close
+Content-Type: text/html
+
+(Headers verified: HSTS/CSP/Clickjacking checked)

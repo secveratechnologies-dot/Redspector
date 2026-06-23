@@ -10,6 +10,16 @@ import { rateLimiter } from './middleware/rateLimiter.js';
 
 const app = express();
 
+// High-precision performance tracing
+app.use((req, res, next) => {
+  const start = performance.now();
+  res.on('finish', () => {
+    const duration = performance.now() - start;
+    console.log(`[Trace] ${req.method} ${req.originalUrl} - Status: ${res.statusCode} - Duration: ${duration.toFixed(2)}ms`);
+  });
+  next();
+});
+
 // Standard middlewares
 app.use(helmet());
 app.use(cors());
@@ -20,6 +30,8 @@ app.use(express.urlencoded({ extended: true }));
 // Rate Limiters
 app.use('/api/auth', rateLimiter({ limit: 5, windowSeconds: 60 }));
 app.use('/api', rateLimiter({ limit: 100, windowSeconds: 60 }));
+
+app.get('/ping', (req, res) => res.send('pong'));
 
 // Active health check for database and Redis cache
 app.get('/health', async (req, res) => {

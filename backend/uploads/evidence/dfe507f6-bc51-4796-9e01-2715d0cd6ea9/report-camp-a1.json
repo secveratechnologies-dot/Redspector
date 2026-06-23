@@ -1,0 +1,9 @@
+{
+  "campaignId": "camp-a1",
+  "campaignName": "Perimeter Scan A",
+  "tenantId": "dfe507f6-bc51-4796-9e01-2715d0cd6ea9",
+  "executionTimeSeconds": 6,
+  "totalAssetsScanned": 0,
+  "findingsIdentified": 0,
+  "completedAt": "2026-06-22T13:45:39.644Z"
+}

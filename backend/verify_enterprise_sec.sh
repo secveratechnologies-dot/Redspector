@@ -1,8 +1,8 @@
 #!/bin/bash
 set -e
 
-API_URL="http://localhost:5001/api"
-HEALTH_URL="http://localhost:5001/health"
+API_URL="http://127.0.0.1:5001/api"
+HEALTH_URL="http://127.0.0.1:5001/health"
 
 # Helper to clear rate limit keys in Redis so the test runner doesn't trigger 429 Rate Limit
 clear_rate_limits() {

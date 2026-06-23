@@ -8,7 +8,7 @@ import {
   ShieldCheck, BarChart3, Award, CheckCircle2, AlertCircle
 } from 'lucide-react';
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5001/api';
 
 type ReportType = 'executive' | 'technical' | 'risk';
 type ReportFormat = 'json' | 'csv' | 'pdf';

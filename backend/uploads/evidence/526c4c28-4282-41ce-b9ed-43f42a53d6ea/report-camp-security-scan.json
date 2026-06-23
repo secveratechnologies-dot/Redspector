@@ -1,0 +1,9 @@
+{
+  "campaignId": "camp-security-scan",
+  "campaignName": "Active Port and Web Scan",
+  "tenantId": "526c4c28-4282-41ce-b9ed-43f42a53d6ea",
+  "executionTimeSeconds": 6,
+  "totalAssetsScanned": 3,
+  "findingsIdentified": 2,
+  "completedAt": "2026-06-22T15:33:17.897Z"
+}

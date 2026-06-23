@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-API_URL="http://localhost:5001/api"
+API_URL="http://127.0.0.1:5001/api"
 
 # Helper to clear rate limit keys in Redis
 clear_rate_limits() {

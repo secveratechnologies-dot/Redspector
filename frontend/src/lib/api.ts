@@ -1,4 +1,4 @@
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5001/api';
 
 /**
  * Resolves the authenticated JWT token from localStorage cache.
@@ -38,6 +38,11 @@ export const apiRequest = async (path: string, options: RequestInit = {}) => {
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
+    if (response.status === 401 && typeof window !== 'undefined') {
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('user');
+      window.location.href = '/login';
+    }
     throw new Error(errorData.message || `Request failed with code ${response.status}`);
   }
 

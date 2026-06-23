@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-API_URL="http://localhost:5001/api"
+API_URL="http://127.0.0.1:5001/api"
 
 echo "=== 1. Registering User and Logging In ==="
 USER_REG=$(curl -s -X POST "$API_URL/auth/register" \
@@ -18,7 +18,7 @@ echo "Login Success. Tenant ID: $TENANT_ID"
 
 echo ""
 echo "=== 2. Creating Scanning Assets ==="
-# 1. IP Asset (Network scan on localhost)
+# 1. IP Asset (Network scan on 127.0.0.1)
 echo "Registering IP asset..."
 CREATE_IP=$(curl -s -X POST "$API_URL/assets" \
   -H "Content-Type: application/json" \

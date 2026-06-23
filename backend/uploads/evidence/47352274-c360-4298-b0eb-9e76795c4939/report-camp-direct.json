@@ -1,0 +1,9 @@
+{
+  "campaignId": "camp-direct",
+  "campaignName": "Direct Campaign Scan",
+  "tenantId": "47352274-c360-4298-b0eb-9e76795c4939",
+  "executionTimeSeconds": 6,
+  "totalAssetsScanned": 0,
+  "findingsIdentified": 0,
+  "completedAt": "2026-06-22T13:50:41.762Z"
+}

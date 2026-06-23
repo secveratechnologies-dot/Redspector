@@ -1,0 +1,9 @@
+{
+  "campaignId": "camp-evid",
+  "campaignName": "Evidence Collector Run",
+  "tenantId": "7460fd53-6ee5-4066-87cc-f7d7b1720bc6",
+  "executionTimeSeconds": 6,
+  "totalAssetsScanned": 2,
+  "findingsIdentified": 2,
+  "completedAt": "2026-06-22T13:49:23.852Z"
+}

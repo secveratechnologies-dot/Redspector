@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-API_URL="http://localhost:5001/api"
+API_URL="http://127.0.0.1:5001/api"
 
 echo "=== 1. Registering User and Logging In ==="
 USER_REG=$(curl -s -X POST "$API_URL/auth/register" \

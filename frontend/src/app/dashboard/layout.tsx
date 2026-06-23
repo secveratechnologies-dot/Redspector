@@ -63,8 +63,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { id: 'deliverables', href: '/dashboard/deliverables', icon: Award, label: 'Deliverables' },
   ];
 
-  const showAdmin = role === 'admin' || role === 'security manager';
-  const showExecutive = role === 'executive' || role === 'admin';
+  const showAdmin = role.includes('admin') || role === 'security manager';
+  const showExecutive = role === 'executive' || role.includes('admin') || role === 'viewer' || role === 'auditor';
 
   const renderNavList = (items: typeof securityItems) => (
     <div className="space-y-1">

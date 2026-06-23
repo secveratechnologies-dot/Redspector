@@ -1,0 +1,9 @@
+{
+  "campaignId": "camp-fail",
+  "campaignName": "Failing Scan Test",
+  "tenantId": "a57694fb-a7b1-438d-bd26-8ed22395abd3",
+  "executionTimeSeconds": 6,
+  "totalAssetsScanned": 0,
+  "findingsIdentified": 0,
+  "completedAt": "2026-06-22T15:14:04.155Z"
+}
