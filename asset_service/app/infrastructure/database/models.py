@@ -26,7 +26,7 @@ class Asset(Base):
         UniqueConstraint('tenant_id', 'value', name='uix_tenant_asset_value'),
     )
 
-    metadata_items = relationship("AssetMetadata", back_populates="asset", cascade="all, delete-orphan")
+    metadata_items = relationship("AssetMetadata", back_populates="asset", cascade="all, delete-orphan", lazy="selectin")
 
 
 class AssetMetadata(Base):

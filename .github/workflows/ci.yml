@@ -1,0 +1,50 @@
+name: RedSpectre CI/CD
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [iam_service, asset_service, threat_service]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+        
+    - name: Install dependencies
+      run: |
+        cd ${{ matrix.service }}
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: Run Tests
+      run: |
+        cd ${{ matrix.service }}
+        pytest -v
+
+  build-and-deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Build Docker Compose
+      run: |
+        docker-compose build
+        
+    - name: Deploy to Staging (Placeholder)
+      run: |
+        echo "Simulating deployment to 192.168.1.100..."
+        echo "# ssh deployer@192.168.1.100 'cd /opt/redspectre && git pull && docker-compose up -d --build'"
+        echo "Deployment complete!"
